@@ -63,6 +63,12 @@ h1 .lev { font-weight: 800; }
 .news .go:focus-visible { outline: 3px solid var(--t); outline-offset: 3px; }
 .news .src { font-size: 13px; color: var(--t); opacity: .9; }
 .news .src a { color: var(--t); }
+.news li.vorbei { --c: #e6e6e6; --t: #4a4a4a; --bt: #4a4a4a; --bc: #ffffff; }
+.news li.vorbei .t { opacity: .85; }
+.news .share { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; }
+.news .share a, .news .share button { color: var(--t); background: none; border: 0; padding: 4px 0; font: inherit; text-decoration: underline; cursor: pointer; }
+.news .share a:focus-visible, .news .share button:focus-visible { outline: 3px solid var(--t); outline-offset: 2px; }
+.news li.trenner { background: transparent; color: var(--white); padding: 6px 4px 0; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 800; }
 .links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .links a {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -158,8 +164,66 @@ footer a:focus-visible { outline: 2px solid var(--white); outline-offset: 2px; }
 </div>
 
 <script>
-// Links aus unseren Beiträgen: erscheinen oben, jeder in einer eigenen Farbe (siehe FARBEN). Leer = Bereich bleibt ausgeblendet.
+// Links aus unseren Beiträgen. Pflege: neue Einträge oben ergänzen (seit = Zeitpunkt unseres Beitrags, ab = erster Termin, bis = letzter Termin, gepostet = Datum unseres Beitrags).
+// Die Seite sortiert selbst: kommende Termine farbig oben, vorbeigegangene grau darunter. Alte Einträge bleiben stehen. Leer = Bereich bleibt ausgeblendet.
 const AKTUELL = [
+{
+    title: "Repair Café im Probierwerk",
+    when: "Samstag, 28.11.2026, 11–15 Uhr",
+    where: "Stauffenbergstraße 14-20, Eingang „Zur alten Fabrik“",
+    url: "https://ausbesserungswert.de/",
+    bis: "2026-11-28",
+    seit: "2026-11-23T17:39",
+    gepostet: "2026-11-23"
+  },
+  {
+    title: "Geschichte am Kamin",
+    when: "Mittwoch, 02.12.2026, 18:30 Uhr",
+    where: "Villa Römer, Kaminzimmer, Haus-Vorster-Straße 6",
+    url: "https://jgvogv.de/geschichte-in-leverkusen/geschichte-am-kamin",
+    bis: "2026-12-02",
+    seit: "2026-11-27T17:33",
+    gepostet: "2026-11-27"
+  },
+  {
+    title: "Weihnachtskonzert St. Remigius",
+    when: "Montag, 07.12.2026, 19 Uhr",
+    where: "St. Remigius, An Sankt Remigius 7",
+    url: "https://www.mcb-lev.de/",
+    bis: "2026-12-07",
+    seit: "2026-12-03T17:46",
+    gepostet: "2026-12-03"
+  },
+  {
+    title: "Adventssingen vor dem Gemeindehaus",
+    when: "Freitag, 11.12.2026, und Freitag, 18.12.2026, jeweils 17:30–18 Uhr",
+    where: "Gemeindehaus Bielert, Bielertstraße 14",
+    url: "https://www.instagram.com/evangelisch_in_opladen/",
+    ab: "2026-12-11",
+    bis: "2026-12-18",
+    seit: "2026-12-07T17:30",
+    gepostet: "2026-12-07"
+  },
+  {
+    title: "Weihnachtsmarkt Opladen: Bergisches Dorf",
+    when: "bis Mittwoch, 30.12.2026 (13.12.2026, 13 Uhr: „Opladen sucht den Weihnachtsstar“)",
+    where: "Fußgängerzone Opladen",
+    url: "https://lust-auf-leverkusen.de/kultur/veranstaltungen/",
+    ab: "2026-11-19",
+    bis: "2026-12-30",
+    seit: "2026-12-08T17:30",
+    gepostet: "2026-12-08"
+  },
+  {
+    title: "Eisstockschießen im Restaurant Gallodini",
+    when: "Mittwoch, 04.11.2026, bis Sonntag, 31.01.2027",
+    where: "Restaurant Gallodini, Neue Bahnstadt Opladen",
+    url: "https://www.gallodini-leverkusen.de/",
+    ab: "2026-11-04",
+    bis: "2027-01-31",
+    seit: "2026-11-19T17:30",
+    gepostet: "2026-11-19"
+  },
 ];
 
 // Farben für die Kästen "Links aus unseren Beiträgen": werden der Reihe nach vergeben (1. Link Petrol, 2. Waldgrün, ...).
@@ -176,12 +240,43 @@ const FARBEN = [
 ];
 
 const news = document.getElementById("news");
-news.hidden = AKTUELL.length === 0;
-document.getElementById("news-label").hidden = AKTUELL.length === 0;
-AKTUELL.forEach((n, i) => {
+// "Heute" in Berliner Zeit. Zum Testen: Seite mit #stand=2026-11-30 aufrufen.
+const jetzt = (() => {
+  const m = location.hash.match(/stand=(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?/);
+  if (m) return m[1] + "T" + (m[2] || "12:00");
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+})();
+const heute = jetzt.slice(0, 10);
+// Erst sichtbar, wenn unser Beitrag online ist (seit). Reihenfolge: 1. Beiträge mit "Link in Bio", 2. alle weiteren Beiträge, 3. vorbeigegangene (grau).
+const sichtbar = AKTUELL.filter(n => !n.seit || n.seit <= jetzt);
+const nachTermin = (a, b) => (a.ab || a.bis || "9999").localeCompare(b.ab || b.bis || "9999");
+const kommend = sichtbar.filter(n => !n.bis || n.bis >= heute).sort(nachTermin);
+const kommendBio = kommend.filter(n => n.bio);
+const kommendWeitere = kommend.filter(n => !n.bio);
+const vorbei = sichtbar.filter(n => n.bis && n.bis < heute).sort((a, b) => b.bis.localeCompare(a.bis));
+news.hidden = sichtbar.length === 0;
+document.getElementById("news-label").hidden = sichtbar.length === 0;
+// Teilen ohne Tracking: reine Links zu WhatsApp und Facebook, dazu "Link kopieren".
+function teilen(n) {
+  const wrap = document.createElement("div"); wrap.className = "share";
+  const lab = document.createElement("span"); lab.textContent = "Teilen:"; wrap.appendChild(lab);
+  const text = `${n.title}, ${n.when}${n.where ? ", " + n.where : ""}`;
+  const mk = (name, href) => { const a = document.createElement("a"); a.href = href; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = name; a.setAttribute("aria-label", name + ": " + n.title); wrap.appendChild(a); };
+  mk("WhatsApp", "https://wa.me/?text=" + encodeURIComponent(text + "\n" + n.url));
+  mk("Facebook", "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(n.url));
+  const b = document.createElement("button"); b.type = "button"; b.textContent = "Link kopieren"; b.setAttribute("aria-label", "Link kopieren: " + n.title);
+  b.addEventListener("click", () => {
+    const fertig = () => { b.textContent = "Kopiert"; setTimeout(() => { b.textContent = "Link kopieren"; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(n.url).then(fertig, () => {});
+  });
+  wrap.appendChild(b);
+  return wrap;
+}
+function karte(n, i, istVorbei) {
   const li = document.createElement("li");
-  const f = FARBEN[i % FARBEN.length];
-  li.style.cssText = `--c:${f.c};--t:${f.t};--bt:${f.bt};--bc:${f.bc}`;
+  if (istVorbei) li.className = "vorbei";
+  else { const f = FARBEN[i % FARBEN.length]; li.style.cssText = `--c:${f.c};--t:${f.t};--bt:${f.bt};--bc:${f.bc}`; }
   const h = document.createElement("p"); h.className = "t"; h.textContent = n.title;
   const w = document.createElement("p"); w.className = "when"; w.textContent = n.when;
   li.append(h, w);
@@ -191,8 +286,18 @@ AKTUELL.forEach((n, i) => {
   const a = document.createElement("a"); a.className = "go"; a.href = n.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Mehr erfahren →";
   const src = document.createElement("span"); src.className = "src"; src.append("Link führt zu: ");
   const sa = document.createElement("a"); sa.href = n.url; sa.target = "_blank"; sa.rel = "noopener"; sa.textContent = new URL(n.url).hostname.replace(/^www\./, "");
-  src.appendChild(sa); row.append(a, src); li.appendChild(row); news.appendChild(li);
-});
+  src.appendChild(sa); row.append(a, src); li.appendChild(row);
+  if (!istVorbei) li.appendChild(teilen(n));
+  news.appendChild(li);
+}
+function gruppe(titel, liste, istVorbei, off = 0) {
+  if (!liste.length) return;
+  if (titel) { const t = document.createElement("li"); t.className = "trenner"; t.textContent = titel; news.appendChild(t); }
+  liste.forEach((n, i) => karte(n, i + off, istVorbei));
+}
+gruppe(kommendBio.length && kommendWeitere.length ? "Link in Bio" : "", kommendBio, false);
+gruppe(kommendBio.length ? "Weitere Beiträge von uns" : "", kommendWeitere, false, kommendBio.length);
+gruppe("Schon vorbei", vorbei, true);
 
 // Link-Liste: hier werden Links ergänzt, entfernt oder umsortiert.
 const LINKS = [
